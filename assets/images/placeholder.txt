@@ -1,0 +1,5 @@
+# Placeholder Images Directory
+
+This directory is for storing additional images used in the Aura app.
+
+The main app assets (icon, splash screen, etc.) are stored in the parent assets directory.

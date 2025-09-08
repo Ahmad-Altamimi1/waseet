@@ -1,0 +1,32 @@
+{
+  "expo": {
+    "name": "Aura",
+    "slug": "aura-fashion-app",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "newArchEnabled": false,
+    "assetBundlePatterns": ["**/*"],
+    "splash": {
+      "image": "./assets/splash-icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#F0EBFF"
+    },
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.aura.fashionapp"
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#F0EBFF"
+      },
+      "edgeToEdgeEnabled": true,
+      "package": "com.aura.fashionapp"
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    }
+  }
+}
