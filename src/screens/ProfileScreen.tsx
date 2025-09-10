@@ -2,16 +2,44 @@ import React from "react";
 import { View, Text, StyleSheet, TouchableOpacity, Alert } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
+import { useNavigation } from "@react-navigation/native";
+import { StackNavigationProp } from "@react-navigation/stack";
 import { theme } from "../constants/theme";
 import { useApp } from "../context/AppContext";
+import { useLanguage } from "../context/LanguageContext";
+import { RootStackParamList } from "../types";
+
+type ProfileScreenNavigationProp = StackNavigationProp<RootStackParamList>;
 
 const ProfileScreen: React.FC = () => {
   const { state, actions } = useApp();
+  const { t, changeLanguage, currentLanguage, isRTL } = useLanguage();
+  const navigation = useNavigation<ProfileScreenNavigationProp>();
 
   const handleLogout = () => {
-    Alert.alert("Logout", "Are you sure you want to logout?", [
-      { text: "Cancel", style: "cancel" },
-      { text: "Logout", onPress: actions.logout, style: "destructive" },
+    Alert.alert(t("profile.logout"), t("profile.logout_message"), [
+      { text: t("common.cancel"), style: "cancel" },
+      {
+        text: t("profile.logout"),
+        onPress: actions.logout,
+        style: "destructive",
+      },
+    ]);
+  };
+
+  const handleLanguageChange = () => {
+    Alert.alert(t("profile.select_language"), "", [
+      { text: t("common.cancel"), style: "cancel" },
+      {
+        text: t("profile.english"),
+        onPress: () => changeLanguage("en"),
+        style: currentLanguage === "en" ? "destructive" : "default",
+      },
+      {
+        text: t("profile.arabic"),
+        onPress: () => changeLanguage("ar"),
+        style: currentLanguage === "ar" ? "destructive" : "default",
+      },
     ]);
   };
 
@@ -20,8 +48,8 @@ const ProfileScreen: React.FC = () => {
       colors={theme.colors.gradients.lightGradient}
       style={styles.container}
     >
-      <View style={styles.header}>
-        <Text style={styles.title}>Profile</Text>
+      <View style={[styles.header, isRTL && styles.rtlContainer]}>
+        <Text style={styles.title}>{t("profile.title")}</Text>
       </View>
 
       <View style={styles.content}>
@@ -38,70 +66,141 @@ const ProfileScreen: React.FC = () => {
         </View>
 
         <View style={styles.menuSection}>
-          <TouchableOpacity style={styles.menuItem}>
+          <TouchableOpacity
+            style={[styles.menuItem, isRTL && styles.rtlMenuItem]}
+            onPress={() => {
+              Alert.alert(
+                t("profile.edit_profile"),
+                t("profile.edit_profile_coming_soon")
+              );
+            }}
+          >
             <Ionicons
               name="person-outline"
               size={24}
               color={theme.colors.accent.lavender}
             />
-            <Text style={styles.menuText}>Edit Profile</Text>
+            <Text style={[styles.menuText, isRTL && styles.rtlText]}>
+              {t("profile.edit_profile")}
+            </Text>
             <Ionicons
-              name="chevron-forward"
+              name={isRTL ? "chevron-back" : "chevron-forward"}
               size={20}
               color={theme.colors.neutral.gray400}
             />
           </TouchableOpacity>
 
-          <TouchableOpacity style={styles.menuItem}>
+          <TouchableOpacity
+            style={[styles.menuItem, isRTL && styles.rtlMenuItem]}
+            onPress={() => {
+              // Navigate to Orders tab
+              navigation.navigate("Main");
+              // You could also use navigation.navigate("Main", { screen: "Orders" }) if needed
+            }}
+          >
             <Ionicons
               name="bag-outline"
               size={24}
               color={theme.colors.accent.lavender}
             />
-            <Text style={styles.menuText}>Order History</Text>
+            <Text style={[styles.menuText, isRTL && styles.rtlText]}>
+              {t("profile.order_history")}
+            </Text>
             <Ionicons
-              name="chevron-forward"
+              name={isRTL ? "chevron-back" : "chevron-forward"}
               size={20}
               color={theme.colors.neutral.gray400}
             />
           </TouchableOpacity>
 
-          <TouchableOpacity style={styles.menuItem}>
+          <TouchableOpacity
+            style={[styles.menuItem, isRTL && styles.rtlMenuItem]}
+            onPress={() => {
+              Alert.alert(
+                t("profile.notifications"),
+                t("profile.notifications_coming_soon")
+              );
+            }}
+          >
             <Ionicons
               name="notifications-outline"
               size={24}
               color={theme.colors.accent.lavender}
             />
-            <Text style={styles.menuText}>Notifications</Text>
+            <Text style={[styles.menuText, isRTL && styles.rtlText]}>
+              {t("profile.notifications")}
+            </Text>
             <Ionicons
-              name="chevron-forward"
+              name={isRTL ? "chevron-back" : "chevron-forward"}
               size={20}
               color={theme.colors.neutral.gray400}
             />
           </TouchableOpacity>
 
-          <TouchableOpacity style={styles.menuItem}>
+          <TouchableOpacity
+            style={[styles.menuItem, isRTL && styles.rtlMenuItem]}
+            onPress={handleLanguageChange}
+          >
+            <Ionicons
+              name="language-outline"
+              size={24}
+              color={theme.colors.accent.lavender}
+            />
+            <Text style={[styles.menuText, isRTL && styles.rtlText]}>
+              {t("profile.language")}
+            </Text>
+            <View style={styles.languageInfo}>
+              <Text style={[styles.languageText, isRTL && styles.rtlText]}>
+                {currentLanguage === "en"
+                  ? t("profile.english")
+                  : t("profile.arabic")}
+              </Text>
+              <Ionicons
+                name={isRTL ? "chevron-back" : "chevron-forward"}
+                size={20}
+                color={theme.colors.neutral.gray400}
+              />
+            </View>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[styles.menuItem, isRTL && styles.rtlMenuItem]}
+            onPress={() => {
+              Alert.alert(
+                t("profile.help_support"),
+                t("profile.help_support_message"),
+                [{ text: t("common.ok") }]
+              );
+            }}
+          >
             <Ionicons
               name="help-circle-outline"
               size={24}
               color={theme.colors.accent.lavender}
             />
-            <Text style={styles.menuText}>Help & Support</Text>
+            <Text style={[styles.menuText, isRTL && styles.rtlText]}>
+              {t("profile.help_support")}
+            </Text>
             <Ionicons
-              name="chevron-forward"
+              name={isRTL ? "chevron-back" : "chevron-forward"}
               size={20}
               color={theme.colors.neutral.gray400}
             />
           </TouchableOpacity>
         </View>
 
-        <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
+        <TouchableOpacity
+          style={[styles.logoutButton, isRTL && styles.rtlMenuItem]}
+          onPress={handleLogout}
+        >
           <Ionicons
             name="log-out-outline"
             size={24}
             color={theme.colors.status.error}
           />
-          <Text style={styles.logoutText}>Logout</Text>
+          <Text style={[styles.logoutText, isRTL && styles.rtlText]}>
+            {t("profile.logout")}
+          </Text>
         </TouchableOpacity>
       </View>
     </LinearGradient>
@@ -193,6 +292,24 @@ const styles = StyleSheet.create({
     fontWeight: theme.typography.weights.medium,
     color: theme.colors.status.error,
     marginLeft: theme.spacing.sm,
+  },
+  rtlContainer: {
+    flexDirection: "row-reverse",
+  },
+  rtlMenuItem: {
+    flexDirection: "row-reverse",
+  },
+  rtlText: {
+    textAlign: "right",
+  },
+  languageInfo: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  languageText: {
+    fontSize: theme.typography.sizes.sm,
+    color: theme.colors.text.secondary,
+    marginRight: theme.spacing.sm,
   },
 });
 

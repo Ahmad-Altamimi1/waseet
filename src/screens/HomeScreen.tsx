@@ -12,6 +12,8 @@ import {
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
+import { useNavigation } from "@react-navigation/native";
+import { StackNavigationProp } from "@react-navigation/stack";
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -24,10 +26,12 @@ import * as yup from "yup";
 
 import { theme } from "../constants/theme";
 import { useApp } from "../context/AppContext";
-import { AddProductForm } from "../types";
+import { AddProductForm, RootStackParamList } from "../types";
+
+type HomeScreenNavigationProp = StackNavigationProp<RootStackParamList>;
 
 // Validation schema
-const addProductSchema = yup.object({
+const addProductSchema = yup.object().shape({
   link: yup
     .string()
     .url("Please enter a valid URL")
@@ -35,20 +39,18 @@ const addProductSchema = yup.object({
   price: yup
     .string()
     .matches(/^\d+(\.\d{1,2})?$/, "Please enter a valid price")
-    .required("Price is required"),
+    .optional(),
   quantity: yup
     .string()
     .matches(/^\d+$/, "Please enter a valid quantity")
     .required("Quantity is required"),
-  // color: yup
-  //   .string()
-  //   .min(2, "Color must be at least 2 characters")
-  //   .required("Color is required"),
-  // size: yup.string().min(1, "Size is required").required("Size is required"),
-});
+  color: yup.string().optional(),
+  size: yup.string().optional(),
+}) as yup.ObjectSchema<AddProductForm>;
 
 const HomeScreen: React.FC = () => {
   const { actions, state } = useApp();
+  const navigation = useNavigation<HomeScreenNavigationProp>();
   const [isFormVisible, setIsFormVisible] = useState(false);
 
   const formOpacity = useSharedValue(0);
@@ -80,10 +82,10 @@ const HomeScreen: React.FC = () => {
 
     actions.addProduct({
       link: data.link,
-      price: parseFloat(data.price),
+      price: parseFloat(data.price || "0"),
       quantity: parseInt(data.quantity),
-      color: data.color,
-      size: data.size,
+      color: data.color || "",
+      size: data.size || "",
     });
 
     buttonScale.value = withSpring(1);
@@ -137,9 +139,7 @@ const HomeScreen: React.FC = () => {
           {state.isAdmin && (
             <TouchableOpacity
               style={styles.adminButton}
-              onPress={() => {
-                /* Navigate to admin - will be implemented */
-              }}
+              onPress={() => navigation.navigate("Admin")}
             >
               <Ionicons
                 name="settings-outline"
@@ -411,9 +411,7 @@ const HomeScreen: React.FC = () => {
             </Text>
             <TouchableOpacity
               style={styles.viewCartButton}
-              onPress={() => {
-                /* Navigate to order summary */
-              }}
+              onPress={() => navigation.navigate("OrderSummary")}
             >
               <Text style={styles.viewCartButtonText}>View Cart</Text>
               <Ionicons

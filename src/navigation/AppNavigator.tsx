@@ -12,6 +12,7 @@ import {
 } from "../types";
 import { theme } from "../constants/theme";
 import { useApp } from "../context/AppContext";
+import { useLanguage } from "../context/LanguageContext";
 
 // Screens
 import SplashScreen from "../screens/SplashScreen";
@@ -45,6 +46,7 @@ const AuthNavigator = () => (
 // Main Tab Navigator
 const MainTabNavigator = () => {
   const { state } = useApp();
+  const { t } = useLanguage();
 
   return (
     <MainTab.Navigator
@@ -86,13 +88,13 @@ const MainTabNavigator = () => {
       <MainTab.Screen
         name="Home"
         component={HomeScreen}
-        options={{ tabBarLabel: "Home" }}
+        options={{ tabBarLabel: t("navigation.home") }}
       />
       <MainTab.Screen
         name="Orders"
         component={OrdersScreen}
         options={{
-          tabBarLabel: "Orders",
+          tabBarLabel: t("navigation.orders"),
           tabBarBadge:
             state.currentOrder.length > 0
               ? state.currentOrder.length
@@ -109,7 +111,7 @@ const MainTabNavigator = () => {
       <MainTab.Screen
         name="Profile"
         component={ProfileScreen}
-        options={{ tabBarLabel: "Profile" }}
+        options={{ tabBarLabel: t("navigation.profile") }}
       />
     </MainTab.Navigator>
   );

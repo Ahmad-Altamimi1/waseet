@@ -6,6 +6,16 @@ import {
   updateOrderStatus as updateOrderStatusInData,
 } from "../services/dummyData";
 
+// Import Reactotron for logging (only in development)
+let Reactotron: any = null;
+if (__DEV__) {
+  try {
+    Reactotron = require("../config/ReactotronConfig").default;
+  } catch (error) {
+    console.warn("Reactotron not available:", error);
+  }
+}
+
 // State interface
 interface AppState {
   user: User | null;
@@ -36,15 +46,30 @@ const initialState: AppState = {
 
 // Reducer
 const appReducer = (state: AppState, action: AppAction): AppState => {
+  // Log actions in development with Reactotron
+  if (__DEV__ && Reactotron) {
+    Reactotron.log(`Action dispatched: ${action.type}`, action);
+  }
+
   switch (action.type) {
     case "LOGIN":
-      return {
+      const newLoginState = {
         ...state,
         user: action.payload,
         isAuthenticated: true,
         isAdmin: action.payload.email === "admin@aura.com",
       };
+      if (__DEV__ && Reactotron) {
+        Reactotron.log("User logged in", {
+          user: action.payload,
+          isAdmin: newLoginState.isAdmin,
+        });
+      }
+      return newLoginState;
     case "LOGOUT":
+      if (__DEV__ && Reactotron) {
+        Reactotron.log("User logged out");
+      }
       return {
         ...state,
         user: null,
@@ -53,11 +78,22 @@ const appReducer = (state: AppState, action: AppAction): AppState => {
         currentOrder: [],
       };
     case "ADD_PRODUCT":
+      if (__DEV__ && Reactotron) {
+        Reactotron.log("Product added to cart", {
+          product: action.payload,
+          cartCount: state.currentOrder.length + 1,
+        });
+      }
       return {
         ...state,
         currentOrder: [...state.currentOrder, action.payload],
       };
     case "REMOVE_PRODUCT":
+      if (__DEV__ && Reactotron) {
+        Reactotron.log("Product removed from cart", {
+          productId: action.payload,
+        });
+      }
       return {
         ...state,
         currentOrder: state.currentOrder.filter(
@@ -65,6 +101,11 @@ const appReducer = (state: AppState, action: AppAction): AppState => {
         ),
       };
     case "CLEAR_CART":
+      if (__DEV__ && Reactotron) {
+        Reactotron.log("Cart cleared", {
+          previousCartCount: state.currentOrder.length,
+        });
+      }
       return {
         ...state,
         currentOrder: [],

@@ -9,12 +9,18 @@ import {
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
+import { useNavigation } from "@react-navigation/native";
+import { StackNavigationProp } from "@react-navigation/stack";
 import { theme } from "../constants/theme";
 import { useApp } from "../context/AppContext";
 import { getUserOrders } from "../services/dummyData";
+import { RootStackParamList } from "../types";
+
+type OrdersScreenNavigationProp = StackNavigationProp<RootStackParamList>;
 
 const OrdersScreen: React.FC = () => {
-  const { state } = useApp();
+  const { state, actions } = useApp();
+  const navigation = useNavigation<OrdersScreenNavigationProp>();
   const userOrders = state.user ? getUserOrders(state.user.id) : [];
 
   const renderOrderItem = ({ item }: { item: any }) => (
@@ -34,7 +40,10 @@ const OrdersScreen: React.FC = () => {
         {new Date(item.createdAt).toLocaleDateString()}
       </Text>
       <Text style={styles.orderTotal}>${item.totalAmount.toFixed(2)}</Text>
-      <TouchableOpacity style={styles.trackButton}>
+      <TouchableOpacity 
+        style={styles.trackButton}
+        onPress={() => navigation.navigate("OrderTracking", { orderId: item.id })}
+      >
         <Text style={styles.trackButtonText}>Track Order</Text>
         <Ionicons
           name="arrow-forward"
@@ -68,7 +77,10 @@ const OrdersScreen: React.FC = () => {
       <View style={styles.header}>
         <Text style={styles.title}>Your Orders</Text>
         {state.currentOrder.length > 0 && (
-          <TouchableOpacity style={styles.cartButton}>
+          <TouchableOpacity 
+            style={styles.cartButton}
+            onPress={() => navigation.navigate("OrderSummary")}
+          >
             <Ionicons
               name="bag-outline"
               size={24}
@@ -93,7 +105,15 @@ const OrdersScreen: React.FC = () => {
                 {state.currentOrder.length} item
                 {state.currentOrder.length !== 1 ? "s" : ""} ready to order
               </Text>
-              <TouchableOpacity style={styles.confirmButton}>
+              <TouchableOpacity 
+                style={styles.confirmButton}
+                onPress={async () => {
+                  const order = await actions.confirmOrder();
+                  if (order) {
+                    navigation.navigate("OrderConfirmation", { orderId: order.id });
+                  }
+                }}
+              >
                 <Text style={styles.confirmButtonText}>Confirm Order</Text>
               </TouchableOpacity>
             </View>
