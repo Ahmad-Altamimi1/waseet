@@ -188,6 +188,8 @@
     "english": "English",
     "arabic": "العربية",
     "select_language": "Select Language",
+    "language_subtitle": "Choose your preferred language",
+    "language_note": "Language changes will be applied immediately",
     "edit_profile_coming_soon": "Profile editing feature coming soon!",
     "notifications_coming_soon": "Notification settings coming soon!",
     "help_support_message": "Need help?\n\n• Email: support@aura.com\n• Phone: +1 (555) 123-4567\n• Live chat available 24/7"

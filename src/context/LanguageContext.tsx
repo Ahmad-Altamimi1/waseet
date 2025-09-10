@@ -51,14 +51,11 @@ export const LanguageProvider: React.FC<{ children: ReactNode }> = ({ children }
       setCurrentLanguage(language);
       
       // Update React Native RTL settings
-      if (isArabic !== I18nManager.isRTL) {
-        I18nManager.allowRTL(isArabic);
-        I18nManager.forceRTL(isArabic);
-        
-        // Note: In a real app, you might want to restart the app here
-        // for RTL changes to take full effect. For now, we'll handle
-        // RTL styling manually in components.
-      }
+      I18nManager.allowRTL(true);
+      I18nManager.forceRTL(isArabic);
+      
+      // Force re-render by updating state
+      setCurrentLanguage(language);
     } catch (error) {
       console.log('Error changing language:', error);
     }

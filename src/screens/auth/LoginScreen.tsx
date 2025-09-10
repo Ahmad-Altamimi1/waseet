@@ -5,11 +5,11 @@ import {
   StyleSheet,
   TextInput,
   TouchableOpacity,
-  Alert,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
   ActivityIndicator,
+  I18nManager,
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
@@ -25,7 +25,10 @@ import * as yup from "yup";
 
 import { theme } from "../../constants/theme";
 import { useApp } from "../../context/AppContext";
+import { useLanguage } from "../../context/LanguageContext";
+import InfoModal from "../../components/InfoModal";
 import { LoginForm } from "../../types";
+import { getRTLStyle, getRTLIcon, getRTLTextAlign, getRTLFlexDirection } from "../../utils/rtlUtils";
 
 // Validation schema
 const loginSchema = yup.object({
@@ -45,7 +48,12 @@ interface LoginScreenProps {
 
 const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
   const { actions, state } = useApp();
+  const { t, isRTL } = useLanguage();
   const [showPassword, setShowPassword] = useState(false);
+  const [errorModalVisible, setErrorModalVisible] = useState(false);
+
+  // RTL state
+  const isRTLMode = I18nManager.isRTL;
 
   const buttonScale = useSharedValue(1);
   const formOpacity = useSharedValue(0);
@@ -74,10 +82,7 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
     buttonScale.value = withSpring(1);
 
     if (!success) {
-      Alert.alert(
-        "Login Failed",
-        "Please check your credentials and try again."
-      );
+      setErrorModalVisible(true);
     }
   };
 
@@ -103,11 +108,15 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
           showsVerticalScrollIndicator={false}
         >
           {/* Header */}
-          <View style={styles.header}>
-            <Text style={styles.welcomeText}>Welcome to</Text>
-            <Text style={styles.brandText}>Aura</Text>
-            <Text style={styles.subtitleText}>
-              Sign in to continue your fashion journey
+          <View style={getRTLStyle(styles.header, styles.rtlHeader)}>
+            <Text style={[styles.welcomeText, { textAlign: getRTLTextAlign() }]}>
+              {t("auth.welcome_to")}
+            </Text>
+            <Text style={[styles.brandText, { textAlign: getRTLTextAlign() }]}>
+              {t("auth.aura")}
+            </Text>
+            <Text style={[styles.subtitleText, { textAlign: getRTLTextAlign() }]}>
+              {t("auth.sign_in_subtitle")}
             </Text>
           </View>
 
@@ -115,24 +124,27 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
           <Animated.View style={[styles.formContainer, formAnimatedStyle]}>
             {/* Email Input */}
             <View style={styles.inputContainer}>
-              <Text style={styles.inputLabel}>Email</Text>
+              <Text style={[styles.inputLabel, { textAlign: getRTLTextAlign() }]}>
+                {t("auth.email")}
+              </Text>
               <Controller
                 control={control}
                 name="email"
                 render={({ field: { onChange, onBlur, value } }) => (
-                  <View style={styles.inputWrapper}>
+                  <View style={getRTLStyle(styles.inputWrapper, styles.rtlInputWrapper)}>
                     <Ionicons
                       name="mail-outline"
                       size={20}
                       color={theme.colors.neutral.gray500}
-                      style={styles.inputIcon}
+                      style={getRTLStyle(styles.inputIcon, styles.rtlInputIcon)}
                     />
                     <TextInput
                       style={[
                         styles.textInput,
                         errors.email && styles.inputError,
+                        { textAlign: getRTLTextAlign() },
                       ]}
-                      placeholder="Enter your email"
+                      placeholder={t("auth.enter_email")}
                       placeholderTextColor={theme.colors.neutral.gray400}
                       value={value}
                       onChangeText={onChange}
@@ -140,36 +152,42 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
                       keyboardType="email-address"
                       autoCapitalize="none"
                       autoCorrect={false}
+                      textAlign={getRTLTextAlign()}
                     />
                   </View>
                 )}
               />
               {errors.email && (
-                <Text style={styles.errorText}>{errors.email.message}</Text>
+                <Text style={[styles.errorText, { textAlign: getRTLTextAlign() }]}>
+                  {errors.email.message}
+                </Text>
               )}
             </View>
 
             {/* Password Input */}
             <View style={styles.inputContainer}>
-              <Text style={styles.inputLabel}>Password</Text>
+              <Text style={[styles.inputLabel, { textAlign: getRTLTextAlign() }]}>
+                {t("auth.password")}
+              </Text>
               <Controller
                 control={control}
                 name="password"
                 render={({ field: { onChange, onBlur, value } }) => (
-                  <View style={styles.inputWrapper}>
+                  <View style={getRTLStyle(styles.inputWrapper, styles.rtlInputWrapper)}>
                     <Ionicons
                       name="lock-closed-outline"
                       size={20}
                       color={theme.colors.neutral.gray500}
-                      style={styles.inputIcon}
+                      style={getRTLStyle(styles.inputIcon, styles.rtlInputIcon)}
                     />
                     <TextInput
                       style={[
                         styles.textInput,
                         styles.passwordInput,
                         errors.password && styles.inputError,
+                        { textAlign: getRTLTextAlign() },
                       ]}
-                      placeholder="Enter your password"
+                      placeholder={t("auth.enter_password")}
                       placeholderTextColor={theme.colors.neutral.gray400}
                       value={value}
                       onChangeText={onChange}
@@ -177,6 +195,7 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
                       secureTextEntry={!showPassword}
                       autoCapitalize="none"
                       autoCorrect={false}
+                      textAlign={getRTLTextAlign()}
                     />
                     <TouchableOpacity
                       style={styles.passwordToggle}
@@ -192,7 +211,9 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
                 )}
               />
               {errors.password && (
-                <Text style={styles.errorText}>{errors.password.message}</Text>
+                <Text style={[styles.errorText, { textAlign: getRTLTextAlign() }]}>
+                  {errors.password.message}
+                </Text>
               )}
             </View>
 
@@ -242,6 +263,16 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
           </Animated.View>
         </ScrollView>
       </KeyboardAvoidingView>
+
+      {/* Error Modal */}
+      <InfoModal
+        visible={errorModalVisible}
+        onClose={() => setErrorModalVisible(false)}
+        title={t("auth.login_failed")}
+        message={t("auth.login_failed_message")}
+        type="error"
+        icon="alert-circle-outline"
+      />
     </LinearGradient>
   );
 };
@@ -376,6 +407,23 @@ const styles = StyleSheet.create({
     fontSize: theme.typography.sizes.base,
     color: theme.colors.accent.lavender,
     fontWeight: theme.typography.weights.semibold,
+  },
+  // RTL Styles
+  rtlHeader: {
+    alignItems: "flex-end",
+  },
+  rtlInputWrapper: {
+    flexDirection: "row-reverse",
+  },
+  rtlInputIcon: {
+    marginLeft: 0,
+    marginRight: theme.spacing.md,
+  },
+  rtlButtonContainer: {
+    flexDirection: "row-reverse",
+  },
+  rtlSignupContainer: {
+    flexDirection: "row-reverse",
   },
 });
 

@@ -6,9 +6,9 @@ import {
   ScrollView,
   TextInput,
   TouchableOpacity,
-  Alert,
   KeyboardAvoidingView,
   Platform,
+  I18nManager,
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
@@ -26,7 +26,10 @@ import * as yup from "yup";
 
 import { theme } from "../constants/theme";
 import { useApp } from "../context/AppContext";
+import { useLanguage } from "../context/LanguageContext";
 import { AddProductForm, RootStackParamList } from "../types";
+import SuccessModal from "../components/SuccessModal";
+import { getRTLStyle, getRTLIcon, getRTLTextAlign, getRTLFlexDirection } from "../utils/rtlUtils";
 
 type HomeScreenNavigationProp = StackNavigationProp<RootStackParamList>;
 
@@ -50,8 +53,13 @@ const addProductSchema = yup.object().shape({
 
 const HomeScreen: React.FC = () => {
   const { actions, state } = useApp();
+  const { t, isRTL } = useLanguage();
   const navigation = useNavigation<HomeScreenNavigationProp>();
   const [isFormVisible, setIsFormVisible] = useState(false);
+  const [successModalVisible, setSuccessModalVisible] = useState(false);
+
+  // RTL state
+  const isRTLMode = I18nManager.isRTL;
 
   const formOpacity = useSharedValue(0);
   const formTranslateY = useSharedValue(50);
@@ -90,21 +98,7 @@ const HomeScreen: React.FC = () => {
 
     buttonScale.value = withSpring(1);
 
-    Alert.alert("Product Added!", "Your product has been added to the order.", [
-      {
-        text: "Add Another",
-        onPress: () => reset(),
-      },
-      {
-        text: "View Cart",
-        onPress: () => {
-          reset();
-          setIsFormVisible(false);
-          formOpacity.value = 0;
-          formTranslateY.value = 50;
-        },
-      },
-    ]);
+    setSuccessModalVisible(true);
   };
 
   const formAnimatedStyle = useAnimatedStyle(() => ({
@@ -127,18 +121,20 @@ const HomeScreen: React.FC = () => {
         showsVerticalScrollIndicator={false}
       >
         {/* Header */}
-        <View style={styles.header}>
-          <View>
-            <Text style={styles.greeting}>
-              Hello, {state.user?.name?.split(" ")[0] || "Beautiful"} ✨
+        <View style={getRTLStyle(styles.header, styles.rtlHeader)}>
+          <View style={getRTLStyle(styles.headerContent, styles.rtlHeaderContent)}>
+            <Text style={[styles.greeting, { textAlign: getRTLTextAlign() }]}>
+              {t("home.hello", {
+                name: state.user?.name?.split(" ")[0] || "Beautiful",
+              })}
             </Text>
-            <Text style={styles.subtitle}>
-              Ready to add something fabulous?
+            <Text style={[styles.subtitle, { textAlign: getRTLTextAlign() }]}>
+              {t("home.ready_to_add")}
             </Text>
           </View>
           {state.isAdmin && (
             <TouchableOpacity
-              style={styles.adminButton}
+              style={getRTLStyle(styles.adminButton, styles.rtlAdminButton)}
               onPress={() => navigation.navigate("Admin")}
             >
               <Ionicons
@@ -195,28 +191,33 @@ const HomeScreen: React.FC = () => {
             <KeyboardAvoidingView
               behavior={Platform.OS === "ios" ? "padding" : "height"}
             >
-              <Text style={styles.formTitle}>Add New Product</Text>
+              <Text style={[styles.formTitle, { textAlign: getRTLTextAlign() }]}>
+                {t("home.add_new_product")}
+              </Text>
 
               {/* Product Link */}
               <View style={styles.inputContainer}>
-                <Text style={styles.inputLabel}>Product Link</Text>
+                <Text style={[styles.inputLabel, { textAlign: getRTLTextAlign() }]}>
+                  {t("home.product_link")}
+                </Text>
                 <Controller
                   control={control}
                   name="link"
                   render={({ field: { onChange, onBlur, value } }) => (
-                    <View style={styles.inputWrapper}>
+                    <View style={getRTLStyle(styles.inputWrapper, styles.rtlInputWrapper)}>
                       <Ionicons
                         name="link-outline"
                         size={20}
                         color={theme.colors.neutral.gray500}
-                        style={styles.inputIcon}
+                        style={getRTLStyle(styles.inputIcon, styles.rtlInputIcon)}
                       />
                       <TextInput
                         style={[
                           styles.textInput,
                           errors.link && styles.inputError,
+                          { textAlign: getRTLTextAlign() },
                         ]}
-                        placeholder="https://shein.com/product-url"
+                        placeholder={t("home.link_placeholder")}
                         placeholderTextColor={theme.colors.neutral.gray400}
                         value={value}
                         onChangeText={onChange}
@@ -224,12 +225,15 @@ const HomeScreen: React.FC = () => {
                         autoCapitalize="none"
                         autoCorrect={false}
                         keyboardType="url"
+                        textAlign={getRTLTextAlign()}
                       />
                     </View>
                   )}
                 />
                 {errors.link && (
-                  <Text style={styles.errorText}>{errors.link.message}</Text>
+                  <Text style={[styles.errorText, { textAlign: getRTLTextAlign() }]}>
+                    {errors.link.message}
+                  </Text>
                 )}
               </View>
 
@@ -456,6 +460,26 @@ const HomeScreen: React.FC = () => {
           </View>
         </View>
       </ScrollView>
+
+      {/* Success Modal */}
+      <SuccessModal
+        visible={successModalVisible}
+        onClose={() => setSuccessModalVisible(false)}
+        title={t("home.product_added")}
+        message={t("home.product_added_message")}
+        primaryButtonText={t("home.view_cart")}
+        secondaryButtonText={t("home.add_another")}
+        onPrimaryPress={() => {
+          reset();
+          setIsFormVisible(false);
+          formOpacity.value = 0;
+          formTranslateY.value = 50;
+          navigation.navigate("Main");
+        }}
+        onSecondaryPress={() => {
+          reset();
+        }}
+      />
     </LinearGradient>
   );
 };
@@ -665,6 +689,41 @@ const styles = StyleSheet.create({
     color: theme.colors.text.secondary,
     marginLeft: theme.spacing.sm,
     flex: 1,
+  },
+  headerContent: {
+    flex: 1,
+  },
+  // RTL Styles
+  rtlHeader: {
+    flexDirection: "row-reverse",
+  },
+  rtlHeaderContent: {
+    alignItems: "flex-end",
+  },
+  rtlAdminButton: {
+    marginLeft: 0,
+    marginRight: theme.spacing.md,
+  },
+  rtlFormContainer: {
+    alignItems: "flex-end",
+  },
+  rtlInputWrapper: {
+    flexDirection: "row-reverse",
+  },
+  rtlInputIcon: {
+    marginLeft: 0,
+    marginRight: theme.spacing.md,
+  },
+  rtlButtonContainer: {
+    flexDirection: "row-reverse",
+  },
+  rtlTipContainer: {
+    flexDirection: "row-reverse",
+  },
+  rtlTipText: {
+    marginLeft: 0,
+    marginRight: theme.spacing.sm,
+    textAlign: "right",
   },
 });
 

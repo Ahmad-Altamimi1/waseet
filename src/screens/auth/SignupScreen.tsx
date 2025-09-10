@@ -10,6 +10,7 @@ import {
   Platform,
   ScrollView,
   ActivityIndicator,
+  I18nManager,
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
@@ -25,7 +26,9 @@ import * as yup from "yup";
 
 import { theme } from "../../constants/theme";
 import { useApp } from "../../context/AppContext";
+import { useLanguage } from "../../context/LanguageContext";
 import { SignupForm } from "../../types";
+import { getRTLStyle, getRTLIcon, getRTLTextAlign, getRTLFlexDirection } from "../../utils/rtlUtils";
 
 // Validation schema
 const signupSchema = yup.object({
@@ -53,8 +56,12 @@ interface SignupScreenProps {
 
 const SignupScreen: React.FC<SignupScreenProps> = ({ navigation }) => {
   const { actions, state } = useApp();
+  const { t, isRTL } = useLanguage();
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+
+  // RTL state
+  const isRTLMode = I18nManager.isRTL;
 
   const buttonScale = useSharedValue(1);
   const formOpacity = useSharedValue(0);

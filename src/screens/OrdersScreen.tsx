@@ -6,6 +6,7 @@ import {
   ScrollView,
   TouchableOpacity,
   FlatList,
+  I18nManager,
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
@@ -13,8 +14,10 @@ import { useNavigation } from "@react-navigation/native";
 import { StackNavigationProp } from "@react-navigation/stack";
 import { theme } from "../constants/theme";
 import { useApp } from "../context/AppContext";
+import { useLanguage } from "../context/LanguageContext";
 import { getUserOrders } from "../services/dummyData";
 import { RootStackParamList } from "../types";
+import { getRTLStyle, getRTLIcon, getRTLTextAlign, getRTLFlexDirection } from "../utils/rtlUtils";
 
 type OrdersScreenNavigationProp = StackNavigationProp<RootStackParamList>;
 

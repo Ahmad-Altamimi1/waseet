@@ -1,5 +1,5 @@
-import React from "react";
-import { View, Text, StyleSheet, TouchableOpacity, Alert } from "react-native";
+import React, { useState } from "react";
+import { View, Text, StyleSheet, TouchableOpacity, I18nManager } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
 import { useNavigation } from "@react-navigation/native";
@@ -8,6 +8,10 @@ import { theme } from "../constants/theme";
 import { useApp } from "../context/AppContext";
 import { useLanguage } from "../context/LanguageContext";
 import { RootStackParamList } from "../types";
+import LanguageModal from "../components/LanguageModal";
+import ConfirmationModal from "../components/ConfirmationModal";
+import InfoModal from "../components/InfoModal";
+import { getRTLStyle, getRTLIcon, getRTLTextAlign, getRTLFlexDirection } from "../utils/rtlUtils";
 
 type ProfileScreenNavigationProp = StackNavigationProp<RootStackParamList>;
 
@@ -15,32 +19,34 @@ const ProfileScreen: React.FC = () => {
   const { state, actions } = useApp();
   const { t, changeLanguage, currentLanguage, isRTL } = useLanguage();
   const navigation = useNavigation<ProfileScreenNavigationProp>();
+  const [languageModalVisible, setLanguageModalVisible] = useState(false);
+  const [logoutModalVisible, setLogoutModalVisible] = useState(false);
+  const [editProfileModalVisible, setEditProfileModalVisible] = useState(false);
+  const [notificationsModalVisible, setNotificationsModalVisible] =
+    useState(false);
+  const [helpModalVisible, setHelpModalVisible] = useState(false);
+
+  // RTL state
+  const isRTLMode = I18nManager.isRTL;
 
   const handleLogout = () => {
-    Alert.alert(t("profile.logout"), t("profile.logout_message"), [
-      { text: t("common.cancel"), style: "cancel" },
-      {
-        text: t("profile.logout"),
-        onPress: actions.logout,
-        style: "destructive",
-      },
-    ]);
+    setLogoutModalVisible(true);
   };
 
   const handleLanguageChange = () => {
-    Alert.alert(t("profile.select_language"), "", [
-      { text: t("common.cancel"), style: "cancel" },
-      {
-        text: t("profile.english"),
-        onPress: () => changeLanguage("en"),
-        style: currentLanguage === "en" ? "destructive" : "default",
-      },
-      {
-        text: t("profile.arabic"),
-        onPress: () => changeLanguage("ar"),
-        style: currentLanguage === "ar" ? "destructive" : "default",
-      },
-    ]);
+    setLanguageModalVisible(true);
+  };
+
+  const handleEditProfile = () => {
+    setEditProfileModalVisible(true);
+  };
+
+  const handleNotifications = () => {
+    setNotificationsModalVisible(true);
+  };
+
+  const handleHelpSupport = () => {
+    setHelpModalVisible(true);
   };
 
   return (
@@ -48,8 +54,10 @@ const ProfileScreen: React.FC = () => {
       colors={theme.colors.gradients.lightGradient}
       style={styles.container}
     >
-      <View style={[styles.header, isRTL && styles.rtlContainer]}>
-        <Text style={styles.title}>{t("profile.title")}</Text>
+      <View style={getRTLStyle(styles.header, styles.rtlHeader)}>
+        <Text style={[styles.title, { textAlign: getRTLTextAlign() }]}>
+          {t("profile.title")}
+        </Text>
       </View>
 
       <View style={styles.content}>
@@ -67,31 +75,26 @@ const ProfileScreen: React.FC = () => {
 
         <View style={styles.menuSection}>
           <TouchableOpacity
-            style={[styles.menuItem, isRTL && styles.rtlMenuItem]}
-            onPress={() => {
-              Alert.alert(
-                t("profile.edit_profile"),
-                t("profile.edit_profile_coming_soon")
-              );
-            }}
+            style={getRTLStyle(styles.menuItem, styles.rtlMenuItem)}
+            onPress={handleEditProfile}
           >
             <Ionicons
               name="person-outline"
               size={24}
               color={theme.colors.accent.lavender}
             />
-            <Text style={[styles.menuText, isRTL && styles.rtlText]}>
+            <Text style={[styles.menuText, { textAlign: getRTLTextAlign() }]}>
               {t("profile.edit_profile")}
             </Text>
             <Ionicons
-              name={isRTL ? "chevron-back" : "chevron-forward"}
+              name={getRTLIcon("chevron-forward", "chevron-back")}
               size={20}
               color={theme.colors.neutral.gray400}
             />
           </TouchableOpacity>
 
           <TouchableOpacity
-            style={[styles.menuItem, isRTL && styles.rtlMenuItem]}
+            style={getRTLStyle(styles.menuItem, styles.rtlMenuItem)}
             onPress={() => {
               // Navigate to Orders tab
               navigation.navigate("Main");
@@ -103,42 +106,37 @@ const ProfileScreen: React.FC = () => {
               size={24}
               color={theme.colors.accent.lavender}
             />
-            <Text style={[styles.menuText, isRTL && styles.rtlText]}>
+            <Text style={[styles.menuText, { textAlign: getRTLTextAlign() }]}>
               {t("profile.order_history")}
             </Text>
             <Ionicons
-              name={isRTL ? "chevron-back" : "chevron-forward"}
+              name={getRTLIcon("chevron-forward", "chevron-back")}
               size={20}
               color={theme.colors.neutral.gray400}
             />
           </TouchableOpacity>
 
           <TouchableOpacity
-            style={[styles.menuItem, isRTL && styles.rtlMenuItem]}
-            onPress={() => {
-              Alert.alert(
-                t("profile.notifications"),
-                t("profile.notifications_coming_soon")
-              );
-            }}
+            style={getRTLStyle(styles.menuItem, styles.rtlMenuItem)}
+            onPress={handleNotifications}
           >
             <Ionicons
               name="notifications-outline"
               size={24}
               color={theme.colors.accent.lavender}
             />
-            <Text style={[styles.menuText, isRTL && styles.rtlText]}>
+            <Text style={[styles.menuText, { textAlign: getRTLTextAlign() }]}>
               {t("profile.notifications")}
             </Text>
             <Ionicons
-              name={isRTL ? "chevron-back" : "chevron-forward"}
+              name={getRTLIcon("chevron-forward", "chevron-back")}
               size={20}
               color={theme.colors.neutral.gray400}
             />
           </TouchableOpacity>
 
           <TouchableOpacity
-            style={[styles.menuItem, isRTL && styles.rtlMenuItem]}
+            style={getRTLStyle(styles.menuItem, styles.rtlMenuItem)}
             onPress={handleLanguageChange}
           >
             <Ionicons
@@ -146,17 +144,17 @@ const ProfileScreen: React.FC = () => {
               size={24}
               color={theme.colors.accent.lavender}
             />
-            <Text style={[styles.menuText, isRTL && styles.rtlText]}>
+            <Text style={[styles.menuText, { textAlign: getRTLTextAlign() }]}>
               {t("profile.language")}
             </Text>
-            <View style={styles.languageInfo}>
-              <Text style={[styles.languageText, isRTL && styles.rtlText]}>
+            <View style={getRTLStyle(styles.languageInfo, styles.rtlLanguageInfo)}>
+              <Text style={[styles.languageText, { textAlign: getRTLTextAlign() }]}>
                 {currentLanguage === "en"
                   ? t("profile.english")
                   : t("profile.arabic")}
               </Text>
               <Ionicons
-                name={isRTL ? "chevron-back" : "chevron-forward"}
+                name={getRTLIcon("chevron-forward", "chevron-back")}
                 size={20}
                 color={theme.colors.neutral.gray400}
               />
@@ -164,25 +162,19 @@ const ProfileScreen: React.FC = () => {
           </TouchableOpacity>
 
           <TouchableOpacity
-            style={[styles.menuItem, isRTL && styles.rtlMenuItem]}
-            onPress={() => {
-              Alert.alert(
-                t("profile.help_support"),
-                t("profile.help_support_message"),
-                [{ text: t("common.ok") }]
-              );
-            }}
+            style={getRTLStyle(styles.menuItem, styles.rtlMenuItem)}
+            onPress={handleHelpSupport}
           >
             <Ionicons
               name="help-circle-outline"
               size={24}
               color={theme.colors.accent.lavender}
             />
-            <Text style={[styles.menuText, isRTL && styles.rtlText]}>
+            <Text style={[styles.menuText, { textAlign: getRTLTextAlign() }]}>
               {t("profile.help_support")}
             </Text>
             <Ionicons
-              name={isRTL ? "chevron-back" : "chevron-forward"}
+              name={getRTLIcon("chevron-forward", "chevron-back")}
               size={20}
               color={theme.colors.neutral.gray400}
             />
@@ -190,7 +182,7 @@ const ProfileScreen: React.FC = () => {
         </View>
 
         <TouchableOpacity
-          style={[styles.logoutButton, isRTL && styles.rtlMenuItem]}
+          style={getRTLStyle(styles.logoutButton, styles.rtlLogoutButton)}
           onPress={handleLogout}
         >
           <Ionicons
@@ -198,11 +190,60 @@ const ProfileScreen: React.FC = () => {
             size={24}
             color={theme.colors.status.error}
           />
-          <Text style={[styles.logoutText, isRTL && styles.rtlText]}>
+          <Text style={[styles.logoutText, { textAlign: getRTLTextAlign() }]}>
             {t("profile.logout")}
           </Text>
         </TouchableOpacity>
       </View>
+
+      {/* Language Selection Modal */}
+      <LanguageModal
+        visible={languageModalVisible}
+        onClose={() => setLanguageModalVisible(false)}
+      />
+
+      {/* Logout Confirmation Modal */}
+      <ConfirmationModal
+        visible={logoutModalVisible}
+        onClose={() => setLogoutModalVisible(false)}
+        title={t("profile.logout")}
+        message={t("profile.logout_message")}
+        confirmText={t("profile.logout")}
+        cancelText={t("common.cancel")}
+        onConfirm={actions.logout}
+        confirmStyle="danger"
+        icon="log-out-outline"
+      />
+
+      {/* Edit Profile Info Modal */}
+      <InfoModal
+        visible={editProfileModalVisible}
+        onClose={() => setEditProfileModalVisible(false)}
+        title={t("profile.edit_profile")}
+        message={t("profile.edit_profile_coming_soon")}
+        type="info"
+        icon="person-outline"
+      />
+
+      {/* Notifications Info Modal */}
+      <InfoModal
+        visible={notificationsModalVisible}
+        onClose={() => setNotificationsModalVisible(false)}
+        title={t("profile.notifications")}
+        message={t("profile.notifications_coming_soon")}
+        type="info"
+        icon="notifications-outline"
+      />
+
+      {/* Help & Support Info Modal */}
+      <InfoModal
+        visible={helpModalVisible}
+        onClose={() => setHelpModalVisible(false)}
+        title={t("profile.help_support")}
+        message={t("profile.help_support_message")}
+        type="info"
+        icon="help-circle-outline"
+      />
     </LinearGradient>
   );
 };
@@ -293,14 +334,17 @@ const styles = StyleSheet.create({
     color: theme.colors.status.error,
     marginLeft: theme.spacing.sm,
   },
-  rtlContainer: {
-    flexDirection: "row-reverse",
+  rtlHeader: {
+    alignItems: "flex-end",
   },
   rtlMenuItem: {
     flexDirection: "row-reverse",
   },
-  rtlText: {
-    textAlign: "right",
+  rtlLanguageInfo: {
+    flexDirection: "row-reverse",
+  },
+  rtlLogoutButton: {
+    flexDirection: "row-reverse",
   },
   languageInfo: {
     flexDirection: "row",
@@ -310,6 +354,10 @@ const styles = StyleSheet.create({
     fontSize: theme.typography.sizes.sm,
     color: theme.colors.text.secondary,
     marginRight: theme.spacing.sm,
+  },
+  rtlLanguageText: {
+    marginRight: 0,
+    marginLeft: theme.spacing.sm,
   },
 });
 

@@ -112,7 +112,7 @@ export const orderStatusInfo = {
     label: "Pending Review",
     description: "Your order is being reviewed",
     color: "#F59E0B",
-    icon: "clock-outline",
+    icon: "time-outline",
   },
   approved: {
     label: "Approved",

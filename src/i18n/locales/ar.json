@@ -188,6 +188,8 @@
     "english": "English",
     "arabic": "العربية",
     "select_language": "اختر اللغة",
+    "language_subtitle": "اختر لغتك المفضلة",
+    "language_note": "سيتم تطبيق تغييرات اللغة فوراً",
     "edit_profile_coming_soon": "ميزة تعديل الملف الشخصي قريباً!",
     "notifications_coming_soon": "إعدادات الإشعارات قريباً!",
     "help_support_message": "تحتاج مساعدة؟\n\n• البريد الإلكتروني: support@aura.com\n• الهاتف: +1 (555) 123-4567\n• الدردشة المباشرة متاحة 24/7"
