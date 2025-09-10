@@ -1,5 +1,11 @@
 import React, { useState } from "react";
-import { View, Text, StyleSheet, TouchableOpacity, I18nManager } from "react-native";
+import {
+  View,
+  Text,
+  StyleSheet,
+  TouchableOpacity,
+  I18nManager,
+} from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
 import { useNavigation } from "@react-navigation/native";
@@ -11,7 +17,12 @@ import { RootStackParamList } from "../types";
 import LanguageModal from "../components/LanguageModal";
 import ConfirmationModal from "../components/ConfirmationModal";
 import InfoModal from "../components/InfoModal";
-import { getRTLStyle, getRTLIcon, getRTLTextAlign, getRTLFlexDirection } from "../utils/rtlUtils";
+import {
+  getRTLStyle,
+  getRTLIcon,
+  getRTLTextAlign,
+  getRTLFlexDirection,
+} from "../utils/rtlUtils";
 
 type ProfileScreenNavigationProp = StackNavigationProp<RootStackParamList>;
 
@@ -147,8 +158,12 @@ const ProfileScreen: React.FC = () => {
             <Text style={[styles.menuText, { textAlign: getRTLTextAlign() }]}>
               {t("profile.language")}
             </Text>
-            <View style={getRTLStyle(styles.languageInfo, styles.rtlLanguageInfo)}>
-              <Text style={[styles.languageText, { textAlign: getRTLTextAlign() }]}>
+            <View
+              style={getRTLStyle(styles.languageInfo, styles.rtlLanguageInfo)}
+            >
+              <Text
+                style={[styles.languageText, { textAlign: getRTLTextAlign() }]}
+              >
                 {currentLanguage === "en"
                   ? t("profile.english")
                   : t("profile.arabic")}

@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useMemo, useCallback, memo } from "react";
 import {
   View,
   Text,
@@ -9,6 +9,8 @@ import {
   KeyboardAvoidingView,
   Platform,
   I18nManager,
+  Image,
+  Alert,
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
@@ -23,43 +25,65 @@ import Animated, {
 import { useForm, Controller } from "react-hook-form";
 import { yupResolver } from "@hookform/resolvers/yup";
 import * as yup from "yup";
+import * as ImagePicker from "expo-image-picker";
+import LottieView from "lottie-react-native";
 
 import { theme } from "../constants/theme";
 import { useApp } from "../context/AppContext";
 import { useLanguage } from "../context/LanguageContext";
 import { AddProductForm, RootStackParamList } from "../types";
 import SuccessModal from "../components/SuccessModal";
-import { getRTLStyle, getRTLIcon, getRTLTextAlign, getRTLFlexDirection } from "../utils/rtlUtils";
+import {
+  getRTLStyle,
+  getRTLIcon,
+  getRTLTextAlign,
+  getRTLFlexDirection,
+} from "../utils/rtlUtils";
+import {
+  extractProductUrl,
+  validateProductUrl,
+  getPlatformName,
+} from "../utils/urlUtils";
 
 type HomeScreenNavigationProp = StackNavigationProp<RootStackParamList>;
 
-// Validation schema
-const addProductSchema = yup.object().shape({
-  link: yup
-    .string()
-    .url("Please enter a valid URL")
-    .required("Product link is required"),
-  price: yup
-    .string()
-    .matches(/^\d+(\.\d{1,2})?$/, "Please enter a valid price")
-    .optional(),
-  quantity: yup
-    .string()
-    .matches(/^\d+$/, "Please enter a valid quantity")
-    .required("Quantity is required"),
-  color: yup.string().optional(),
-  size: yup.string().optional(),
-}) as yup.ObjectSchema<AddProductForm>;
-
-const HomeScreen: React.FC = () => {
+const HomeScreen: React.FC = memo(() => {
   const { actions, state } = useApp();
   const { t, isRTL } = useLanguage();
   const navigation = useNavigation<HomeScreenNavigationProp>();
   const [isFormVisible, setIsFormVisible] = useState(false);
   const [successModalVisible, setSuccessModalVisible] = useState(false);
+  const [uploadedImage, setUploadedImage] = useState<string | null>(null);
+  const [showImageUploadSuccess, setShowImageUploadSuccess] = useState(false);
+  const [extractedUrl, setExtractedUrl] = useState<string>("");
+  const [urlValidationError, setUrlValidationError] = useState<string>("");
+  const [detectedPlatform, setDetectedPlatform] = useState<string>("");
 
   // RTL state
-  const isRTLMode = I18nManager.isRTL;
+  const isRTLMode = useMemo(() => I18nManager.isRTL, []);
+
+  // Validation schema - memoized for performance
+  const addProductSchema = useMemo(
+    () =>
+      yup.object().shape({
+        link: yup
+          .string()
+          .url("Please enter a valid URL")
+          .required("Product link is required"),
+        price: yup
+          .string()
+          .matches(/^\d+(\.\d{1,2})?$/, "Please enter a valid price")
+          .optional(),
+        quantity: yup
+          .string()
+          .matches(/^\d+$/, "Please enter a valid quantity")
+          .required("Quantity is required"),
+        color: yup.string().optional(),
+        size: yup.string().optional(),
+        image: yup.string().optional(),
+      }) as yup.ObjectSchema<AddProductForm>,
+    []
+  );
 
   const formOpacity = useSharedValue(0);
   const formTranslateY = useSharedValue(50);
@@ -85,21 +109,111 @@ const HomeScreen: React.FC = () => {
     }
   };
 
-  const onSubmit = (data: AddProductForm) => {
-    buttonScale.value = withSpring(0.95);
+  const pickImage = useCallback(async () => {
+    try {
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        aspect: [4, 3],
+        quality: 0.8,
+      });
 
-    actions.addProduct({
-      link: data.link,
-      price: parseFloat(data.price || "0"),
-      quantity: parseInt(data.quantity),
-      color: data.color || "",
-      size: data.size || "",
-    });
+      if (!result.canceled && result.assets[0]) {
+        setUploadedImage(result.assets[0].uri);
+        setShowImageUploadSuccess(true);
 
-    buttonScale.value = withSpring(1);
+        // Hide success animation after 2 seconds
+        setTimeout(() => {
+          setShowImageUploadSuccess(false);
+        }, 2000);
+      }
+    } catch (error) {
+      console.log("Error picking image:", error);
+      Alert.alert("Error", "Failed to pick image. Please try again.");
+    }
+  }, []);
 
-    setSuccessModalVisible(true);
-  };
+  const takePhoto = useCallback(async () => {
+    try {
+      const result = await ImagePicker.launchCameraAsync({
+        allowsEditing: true,
+        aspect: [4, 3],
+        quality: 0.8,
+      });
+
+      if (!result.canceled && result.assets[0]) {
+        setUploadedImage(result.assets[0].uri);
+        setShowImageUploadSuccess(true);
+
+        // Hide success animation after 2 seconds
+        setTimeout(() => {
+          setShowImageUploadSuccess(false);
+        }, 2000);
+      }
+    } catch (error) {
+      console.log("Error taking photo:", error);
+      Alert.alert("Error", "Failed to take photo. Please try again.");
+    }
+  }, []);
+
+  const removeImage = useCallback(() => {
+    setUploadedImage(null);
+  }, []);
+
+  const handleUrlChange = useCallback((text: string) => {
+    // Clear previous validation errors
+    setUrlValidationError("");
+    setExtractedUrl("");
+    setDetectedPlatform("");
+
+    if (text.trim()) {
+      const urlInfo = extractProductUrl(text);
+
+      if (urlInfo.isValid) {
+        setExtractedUrl(urlInfo.extractedUrl);
+        setDetectedPlatform(urlInfo.platform);
+        setUrlValidationError("");
+      } else {
+        setUrlValidationError(urlInfo.error || "Invalid URL format");
+        setExtractedUrl("");
+        setDetectedPlatform("");
+      }
+    }
+  }, []);
+
+  const onSubmit = useCallback(
+    (data: AddProductForm) => {
+      // Validate URL before submission
+      if (!extractedUrl) {
+        setUrlValidationError("Please enter a valid product URL");
+        return;
+      }
+
+      buttonScale.value = withSpring(0.95);
+
+      actions.addProduct({
+        link: extractedUrl, // Use extracted URL instead of raw input
+        price: parseFloat(data.price || "0"),
+        quantity: parseInt(data.quantity),
+        color: data.color || "",
+        size: data.size || "",
+        image: uploadedImage || undefined,
+      });
+
+      buttonScale.value = withSpring(1);
+
+      // Reset form and image
+      reset();
+      setUploadedImage(null);
+      setExtractedUrl("");
+      setDetectedPlatform("");
+      setUrlValidationError("");
+      setIsFormVisible(false);
+
+      setSuccessModalVisible(true);
+    },
+    [extractedUrl, uploadedImage, actions, reset, buttonScale]
+  );
 
   const formAnimatedStyle = useAnimatedStyle(() => ({
     opacity: formOpacity.value,
@@ -119,10 +233,19 @@ const HomeScreen: React.FC = () => {
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
+        removeClippedSubviews={true}
+        maxToRenderPerBatch={10}
+        updateCellsBatchingPeriod={50}
+        initialNumToRender={10}
+        windowSize={10}
+        getItemLayout={undefined}
+        scrollEventThrottle={16}
       >
         {/* Header */}
         <View style={getRTLStyle(styles.header, styles.rtlHeader)}>
-          <View style={getRTLStyle(styles.headerContent, styles.rtlHeaderContent)}>
+          <View
+            style={getRTLStyle(styles.headerContent, styles.rtlHeaderContent)}
+          >
             <Text style={[styles.greeting, { textAlign: getRTLTextAlign() }]}>
               {t("home.hello", {
                 name: state.user?.name?.split(" ")[0] || "Beautiful",
@@ -191,48 +314,99 @@ const HomeScreen: React.FC = () => {
             <KeyboardAvoidingView
               behavior={Platform.OS === "ios" ? "padding" : "height"}
             >
-              <Text style={[styles.formTitle, { textAlign: getRTLTextAlign() }]}>
+              <Text
+                style={[styles.formTitle, { textAlign: getRTLTextAlign() }]}
+              >
                 {t("home.add_new_product")}
               </Text>
 
               {/* Product Link */}
               <View style={styles.inputContainer}>
-                <Text style={[styles.inputLabel, { textAlign: getRTLTextAlign() }]}>
+                <Text
+                  style={[styles.inputLabel, { textAlign: getRTLTextAlign() }]}
+                >
                   {t("home.product_link")}
                 </Text>
                 <Controller
                   control={control}
                   name="link"
                   render={({ field: { onChange, onBlur, value } }) => (
-                    <View style={getRTLStyle(styles.inputWrapper, styles.rtlInputWrapper)}>
+                    <View
+                      style={getRTLStyle(
+                        styles.inputWrapper,
+                        styles.rtlInputWrapper
+                      )}
+                    >
                       <Ionicons
                         name="link-outline"
                         size={20}
                         color={theme.colors.neutral.gray500}
-                        style={getRTLStyle(styles.inputIcon, styles.rtlInputIcon)}
+                        style={getRTLStyle(
+                          styles.inputIcon,
+                          styles.rtlInputIcon
+                        )}
                       />
                       <TextInput
                         style={[
                           styles.textInput,
-                          errors.link && styles.inputError,
+                          (errors.link || urlValidationError) &&
+                            styles.inputError,
                           { textAlign: getRTLTextAlign() },
                         ]}
                         placeholder={t("home.link_placeholder")}
                         placeholderTextColor={theme.colors.neutral.gray400}
                         value={value}
-                        onChangeText={onChange}
+                        onChangeText={(text) => {
+                          onChange(text);
+                          handleUrlChange(text);
+                        }}
                         onBlur={onBlur}
                         autoCapitalize="none"
                         autoCorrect={false}
                         keyboardType="url"
                         textAlign={getRTLTextAlign()}
+                        multiline={true}
+                        numberOfLines={2}
                       />
                     </View>
                   )}
                 />
-                {errors.link && (
-                  <Text style={[styles.errorText, { textAlign: getRTLTextAlign() }]}>
-                    {errors.link.message}
+
+                {/* URL Extraction Status */}
+                {extractedUrl && (
+                  <View style={styles.urlExtractionStatus}>
+                    <View style={styles.urlExtractionHeader}>
+                      <Ionicons
+                        name="checkmark-circle"
+                        size={16}
+                        color={theme.colors.status.success}
+                      />
+                      <Text
+                        style={[
+                          styles.urlExtractionText,
+                          { textAlign: getRTLTextAlign() },
+                        ]}
+                      >
+                        {t("home.url_extracted")} (
+                        {detectedPlatform.toUpperCase()})
+                      </Text>
+                    </View>
+                    <Text
+                      style={[
+                        styles.extractedUrlText,
+                        { textAlign: getRTLTextAlign() },
+                      ]}
+                    >
+                      {extractedUrl}
+                    </Text>
+                  </View>
+                )}
+
+                {(errors.link || urlValidationError) && (
+                  <Text
+                    style={[styles.errorText, { textAlign: getRTLTextAlign() }]}
+                  >
+                    {urlValidationError || errors.link?.message}
                   </Text>
                 )}
               </View>
@@ -240,22 +414,38 @@ const HomeScreen: React.FC = () => {
               {/* Price and Quantity Row */}
               <View style={styles.row}>
                 <View style={[styles.inputContainer, styles.halfWidth]}>
-                  <Text style={styles.inputLabel}>Price ($)</Text>
+                  <Text
+                    style={[
+                      styles.inputLabel,
+                      { textAlign: getRTLTextAlign() },
+                    ]}
+                  >
+                    {t("home.price")} ($)
+                  </Text>
                   <Controller
                     control={control}
                     name="price"
                     render={({ field: { onChange, onBlur, value } }) => (
-                      <View style={styles.inputWrapper}>
+                      <View
+                        style={getRTLStyle(
+                          styles.inputWrapper,
+                          styles.rtlInputWrapper
+                        )}
+                      >
                         <Ionicons
                           name="pricetag-outline"
                           size={20}
                           color={theme.colors.neutral.gray500}
-                          style={styles.inputIcon}
+                          style={getRTLStyle(
+                            styles.inputIcon,
+                            styles.rtlInputIcon
+                          )}
                         />
                         <TextInput
                           style={[
                             styles.textInput,
                             errors.price && styles.inputError,
+                            { textAlign: getRTLTextAlign() },
                           ]}
                           placeholder="29.99"
                           placeholderTextColor={theme.colors.neutral.gray400}
@@ -263,32 +453,56 @@ const HomeScreen: React.FC = () => {
                           onChangeText={onChange}
                           onBlur={onBlur}
                           keyboardType="decimal-pad"
+                          textAlign={getRTLTextAlign()}
                         />
                       </View>
                     )}
                   />
                   {errors.price && (
-                    <Text style={styles.errorText}>{errors.price.message}</Text>
+                    <Text
+                      style={[
+                        styles.errorText,
+                        { textAlign: getRTLTextAlign() },
+                      ]}
+                    >
+                      {errors.price.message}
+                    </Text>
                   )}
                 </View>
 
                 <View style={[styles.inputContainer, styles.halfWidth]}>
-                  <Text style={styles.inputLabel}>Quantity</Text>
+                  <Text
+                    style={[
+                      styles.inputLabel,
+                      { textAlign: getRTLTextAlign() },
+                    ]}
+                  >
+                    {t("home.quantity")}
+                  </Text>
                   <Controller
                     control={control}
                     name="quantity"
                     render={({ field: { onChange, onBlur, value } }) => (
-                      <View style={styles.inputWrapper}>
+                      <View
+                        style={getRTLStyle(
+                          styles.inputWrapper,
+                          styles.rtlInputWrapper
+                        )}
+                      >
                         <Ionicons
                           name="layers-outline"
                           size={20}
                           color={theme.colors.neutral.gray500}
-                          style={styles.inputIcon}
+                          style={getRTLStyle(
+                            styles.inputIcon,
+                            styles.rtlInputIcon
+                          )}
                         />
                         <TextInput
                           style={[
                             styles.textInput,
                             errors.quantity && styles.inputError,
+                            { textAlign: getRTLTextAlign() },
                           ]}
                           placeholder="1"
                           placeholderTextColor={theme.colors.neutral.gray400}
@@ -296,12 +510,18 @@ const HomeScreen: React.FC = () => {
                           onChangeText={onChange}
                           onBlur={onBlur}
                           keyboardType="number-pad"
+                          textAlign={getRTLTextAlign()}
                         />
                       </View>
                     )}
                   />
                   {errors.quantity && (
-                    <Text style={styles.errorText}>
+                    <Text
+                      style={[
+                        styles.errorText,
+                        { textAlign: getRTLTextAlign() },
+                      ]}
+                    >
                       {errors.quantity.message}
                     </Text>
                   )}
@@ -311,22 +531,38 @@ const HomeScreen: React.FC = () => {
               {/* Color and Size Row */}
               <View style={styles.row}>
                 <View style={[styles.inputContainer, styles.halfWidth]}>
-                  <Text style={styles.inputLabel}>Color</Text>
+                  <Text
+                    style={[
+                      styles.inputLabel,
+                      { textAlign: getRTLTextAlign() },
+                    ]}
+                  >
+                    {t("home.color")}
+                  </Text>
                   <Controller
                     control={control}
                     name="color"
                     render={({ field: { onChange, onBlur, value } }) => (
-                      <View style={styles.inputWrapper}>
+                      <View
+                        style={getRTLStyle(
+                          styles.inputWrapper,
+                          styles.rtlInputWrapper
+                        )}
+                      >
                         <Ionicons
                           name="color-palette-outline"
                           size={20}
                           color={theme.colors.neutral.gray500}
-                          style={styles.inputIcon}
+                          style={getRTLStyle(
+                            styles.inputIcon,
+                            styles.rtlInputIcon
+                          )}
                         />
                         <TextInput
                           style={[
                             styles.textInput,
                             errors.color && styles.inputError,
+                            { textAlign: getRTLTextAlign() },
                           ]}
                           placeholder="Blush Pink"
                           placeholderTextColor={theme.colors.neutral.gray400}
@@ -334,32 +570,56 @@ const HomeScreen: React.FC = () => {
                           onChangeText={onChange}
                           onBlur={onBlur}
                           autoCapitalize="words"
+                          textAlign={getRTLTextAlign()}
                         />
                       </View>
                     )}
                   />
                   {errors.color && (
-                    <Text style={styles.errorText}>{errors.color.message}</Text>
+                    <Text
+                      style={[
+                        styles.errorText,
+                        { textAlign: getRTLTextAlign() },
+                      ]}
+                    >
+                      {errors.color.message}
+                    </Text>
                   )}
                 </View>
 
                 <View style={[styles.inputContainer, styles.halfWidth]}>
-                  <Text style={styles.inputLabel}>Size</Text>
+                  <Text
+                    style={[
+                      styles.inputLabel,
+                      { textAlign: getRTLTextAlign() },
+                    ]}
+                  >
+                    {t("home.size")}
+                  </Text>
                   <Controller
                     control={control}
                     name="size"
                     render={({ field: { onChange, onBlur, value } }) => (
-                      <View style={styles.inputWrapper}>
+                      <View
+                        style={getRTLStyle(
+                          styles.inputWrapper,
+                          styles.rtlInputWrapper
+                        )}
+                      >
                         <Ionicons
                           name="resize-outline"
                           size={20}
                           color={theme.colors.neutral.gray500}
-                          style={styles.inputIcon}
+                          style={getRTLStyle(
+                            styles.inputIcon,
+                            styles.rtlInputIcon
+                          )}
                         />
                         <TextInput
                           style={[
                             styles.textInput,
                             errors.size && styles.inputError,
+                            { textAlign: getRTLTextAlign() },
                           ]}
                           placeholder="M"
                           placeholderTextColor={theme.colors.neutral.gray400}
@@ -367,14 +627,217 @@ const HomeScreen: React.FC = () => {
                           onChangeText={onChange}
                           onBlur={onBlur}
                           autoCapitalize="characters"
+                          textAlign={getRTLTextAlign()}
                         />
                       </View>
                     )}
                   />
                   {errors.size && (
-                    <Text style={styles.errorText}>{errors.size.message}</Text>
+                    <Text
+                      style={[
+                        styles.errorText,
+                        { textAlign: getRTLTextAlign() },
+                      ]}
+                    >
+                      {errors.size.message}
+                    </Text>
                   )}
                 </View>
+              </View>
+
+              {/* Image Upload Section */}
+              <View style={styles.inputContainer}>
+                <Text
+                  style={[styles.inputLabel, { textAlign: getRTLTextAlign() }]}
+                >
+                  {t("home.product_image")}
+                </Text>
+
+                {/* Image Purpose Explanation */}
+                <View style={styles.imagePurposeContainer}>
+                  <View style={styles.imagePurposeHeader}>
+                    <Ionicons
+                      name="information-circle-outline"
+                      size={20}
+                      color={theme.colors.accent.lavender}
+                    />
+                    <Text
+                      style={[
+                        styles.imagePurposeTitle,
+                        { textAlign: getRTLTextAlign() },
+                      ]}
+                    >
+                      {t("home.image_purpose_title")}
+                    </Text>
+                  </View>
+                  <Text
+                    style={[
+                      styles.imagePurposeText,
+                      { textAlign: getRTLTextAlign() },
+                    ]}
+                  >
+                    {t("home.image_purpose_description")}
+                  </Text>
+
+                  {/* Image Guidelines */}
+                  <View style={styles.imageGuidelines}>
+                    <Text
+                      style={[
+                        styles.guidelinesTitle,
+                        { textAlign: getRTLTextAlign() },
+                      ]}
+                    >
+                      {t("home.image_guidelines")}:
+                    </Text>
+                    <View style={styles.guidelinesList}>
+                      <View
+                        style={getRTLStyle(
+                          styles.guidelineItem,
+                          styles.rtlGuidelineItem
+                        )}
+                      >
+                        <Ionicons
+                          name="checkmark-circle"
+                          size={16}
+                          color={theme.colors.status.success}
+                        />
+                        <Text
+                          style={[
+                            styles.guidelineText,
+                            { textAlign: getRTLTextAlign() },
+                          ]}
+                        >
+                          {t("home.guideline_color")}
+                        </Text>
+                      </View>
+                      <View
+                        style={getRTLStyle(
+                          styles.guidelineItem,
+                          styles.rtlGuidelineItem
+                        )}
+                      >
+                        <Ionicons
+                          name="checkmark-circle"
+                          size={16}
+                          color={theme.colors.status.success}
+                        />
+                        <Text
+                          style={[
+                            styles.guidelineText,
+                            { textAlign: getRTLTextAlign() },
+                          ]}
+                        >
+                          {t("home.guideline_size")}
+                        </Text>
+                      </View>
+                      <View
+                        style={getRTLStyle(
+                          styles.guidelineItem,
+                          styles.rtlGuidelineItem
+                        )}
+                      >
+                        <Ionicons
+                          name="checkmark-circle"
+                          size={16}
+                          color={theme.colors.status.success}
+                        />
+                        <Text
+                          style={[
+                            styles.guidelineText,
+                            { textAlign: getRTLTextAlign() },
+                          ]}
+                        >
+                          {t("home.guideline_design")}
+                        </Text>
+                      </View>
+                    </View>
+                  </View>
+                </View>
+
+                {uploadedImage ? (
+                  <View style={styles.imagePreviewContainer}>
+                    <Image
+                      source={{ uri: uploadedImage }}
+                      style={styles.imagePreview}
+                    />
+                    <View style={styles.imagePreviewOverlay}>
+                      <Text style={styles.imagePreviewLabel}>
+                        {t("home.selected_product_details")}
+                      </Text>
+                    </View>
+                    <TouchableOpacity
+                      style={styles.removeImageButton}
+                      onPress={removeImage}
+                    >
+                      <Ionicons
+                        name="close-circle"
+                        size={24}
+                        color={theme.colors.status.error}
+                      />
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={styles.replaceImageButton}
+                      onPress={pickImage}
+                    >
+                      <Ionicons
+                        name="refresh"
+                        size={20}
+                        color={theme.colors.accent.lavender}
+                      />
+                    </TouchableOpacity>
+                  </View>
+                ) : (
+                  <View style={styles.imageUploadContainer}>
+                    <TouchableOpacity
+                      style={styles.imageUploadButton}
+                      onPress={pickImage}
+                    >
+                      <Ionicons
+                        name="image-outline"
+                        size={32}
+                        color={theme.colors.accent.lavender}
+                      />
+                      <Text style={styles.imageUploadText}>
+                        {t("home.choose_from_gallery")}
+                      </Text>
+                      <Text style={styles.imageUploadSubtext}>
+                        {t("home.show_product_details")}
+                      </Text>
+                    </TouchableOpacity>
+
+                    <TouchableOpacity
+                      style={styles.imageUploadButton}
+                      onPress={takePhoto}
+                    >
+                      <Ionicons
+                        name="camera-outline"
+                        size={32}
+                        color={theme.colors.accent.lavender}
+                      />
+                      <Text style={styles.imageUploadText}>
+                        {t("home.take_photo")}
+                      </Text>
+                      <Text style={styles.imageUploadSubtext}>
+                        {t("home.capture_product_details")}
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
+                )}
+
+                {/* Image Upload Success Animation */}
+                {showImageUploadSuccess && (
+                  <View style={styles.uploadSuccessContainer}>
+                    <LottieView
+                      source={require("../assets/animations/splash.json")}
+                      autoPlay
+                      loop={false}
+                      style={styles.uploadSuccessAnimation}
+                    />
+                    <Text style={styles.uploadSuccessText}>
+                      {t("home.image_uploaded_successfully")}
+                    </Text>
+                  </View>
+                )}
               </View>
 
               {/* Add to Order Button */}
@@ -482,7 +945,7 @@ const HomeScreen: React.FC = () => {
       />
     </LinearGradient>
   );
-};
+});
 
 const styles = StyleSheet.create({
   container: {
@@ -724,6 +1187,174 @@ const styles = StyleSheet.create({
     marginLeft: 0,
     marginRight: theme.spacing.sm,
     textAlign: "right",
+  },
+  // Image Upload Styles
+  imagePurposeContainer: {
+    backgroundColor: theme.colors.primary.beige,
+    borderRadius: theme.borderRadius.md,
+    padding: theme.spacing.md,
+    marginTop: theme.spacing.sm,
+    marginBottom: theme.spacing.sm,
+  },
+  imagePurposeHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: theme.spacing.sm,
+  },
+  imagePurposeTitle: {
+    fontSize: theme.typography.sizes.base,
+    fontWeight: theme.typography.weights.semibold,
+    color: theme.colors.text.primary,
+    marginLeft: theme.spacing.sm,
+  },
+  imagePurposeText: {
+    fontSize: theme.typography.sizes.sm,
+    color: theme.colors.text.secondary,
+    lineHeight: 20,
+    marginBottom: theme.spacing.sm,
+  },
+  imageGuidelines: {
+    marginTop: theme.spacing.sm,
+  },
+  guidelinesTitle: {
+    fontSize: theme.typography.sizes.sm,
+    fontWeight: theme.typography.weights.semibold,
+    color: theme.colors.text.primary,
+    marginBottom: theme.spacing.xs,
+  },
+  guidelinesList: {
+    gap: theme.spacing.xs,
+  },
+  guidelineItem: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  rtlGuidelineItem: {
+    flexDirection: "row-reverse",
+  },
+  guidelineText: {
+    fontSize: theme.typography.sizes.sm,
+    color: theme.colors.text.secondary,
+    marginLeft: theme.spacing.sm,
+  },
+  imagePreviewContainer: {
+    position: "relative",
+    marginTop: theme.spacing.sm,
+    borderRadius: theme.borderRadius.md,
+    overflow: "hidden",
+    ...theme.shadows.md,
+  },
+  imagePreview: {
+    width: "100%",
+    height: 200,
+    resizeMode: "cover",
+  },
+  imagePreviewOverlay: {
+    position: "absolute",
+    bottom: 0,
+    left: 0,
+    right: 0,
+    backgroundColor: "rgba(0,0,0,0.7)",
+    padding: theme.spacing.sm,
+  },
+  imagePreviewLabel: {
+    color: theme.colors.primary.white,
+    fontSize: theme.typography.sizes.sm,
+    fontWeight: theme.typography.weights.medium,
+    textAlign: "center",
+  },
+  removeImageButton: {
+    position: "absolute",
+    top: theme.spacing.sm,
+    right: theme.spacing.sm,
+    backgroundColor: theme.colors.primary.white,
+    borderRadius: 12,
+    padding: 4,
+    ...theme.shadows.sm,
+  },
+  replaceImageButton: {
+    position: "absolute",
+    top: theme.spacing.sm,
+    left: theme.spacing.sm,
+    backgroundColor: theme.colors.primary.white,
+    borderRadius: 12,
+    padding: 4,
+    ...theme.shadows.sm,
+  },
+  imageUploadContainer: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    marginTop: theme.spacing.sm,
+    gap: theme.spacing.sm,
+  },
+  imageUploadButton: {
+    flex: 1,
+    backgroundColor: theme.colors.primary.white,
+    borderRadius: theme.borderRadius.md,
+    padding: theme.spacing.lg,
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 2,
+    borderColor: theme.colors.accent.lavender,
+    borderStyle: "dashed",
+    ...theme.shadows.sm,
+  },
+  imageUploadText: {
+    fontSize: theme.typography.sizes.sm,
+    fontWeight: theme.typography.weights.semibold,
+    color: theme.colors.accent.lavender,
+    marginTop: theme.spacing.sm,
+    textAlign: "center",
+  },
+  imageUploadSubtext: {
+    fontSize: theme.typography.sizes.xs,
+    color: theme.colors.text.secondary,
+    marginTop: theme.spacing.xs,
+    textAlign: "center",
+    lineHeight: 16,
+  },
+  uploadSuccessContainer: {
+    alignItems: "center",
+    marginTop: theme.spacing.sm,
+    backgroundColor: theme.colors.status.success + "10",
+    borderRadius: theme.borderRadius.md,
+    padding: theme.spacing.md,
+  },
+  uploadSuccessAnimation: {
+    width: 60,
+    height: 60,
+  },
+  uploadSuccessText: {
+    fontSize: theme.typography.sizes.sm,
+    color: theme.colors.status.success,
+    fontWeight: theme.typography.weights.medium,
+    marginTop: theme.spacing.xs,
+  },
+  // URL Extraction Styles
+  urlExtractionStatus: {
+    backgroundColor: theme.colors.status.success + "10",
+    borderRadius: theme.borderRadius.md,
+    padding: theme.spacing.sm,
+    marginTop: theme.spacing.sm,
+    borderLeftWidth: 3,
+    borderLeftColor: theme.colors.status.success,
+  },
+  urlExtractionHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: theme.spacing.xs,
+  },
+  urlExtractionText: {
+    fontSize: theme.typography.sizes.sm,
+    fontWeight: theme.typography.weights.semibold,
+    color: theme.colors.status.success,
+    marginLeft: theme.spacing.xs,
+  },
+  extractedUrlText: {
+    fontSize: theme.typography.sizes.xs,
+    color: theme.colors.text.secondary,
+    fontFamily: "monospace",
+    lineHeight: 16,
   },
 });
 

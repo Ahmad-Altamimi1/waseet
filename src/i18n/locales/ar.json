@@ -63,6 +63,20 @@
     "quantity": "الكمية",
     "color": "اللون",
     "size": "المقاس",
+    "product_image": "صورة المنتج",
+    "image_purpose_title": "لماذا نحتاج لرفع صورة؟",
+    "image_purpose_description": "ارفع صورة توضح تفاصيل المنتج المحددة التي تريدها - اللون والمقاس والتصميم المحدد الذي اخترته. هذا يساعدنا في التأكد من طلب ما تريده بالضبط.",
+    "image_guidelines": "ما يجب تضمينه في صورتك",
+    "guideline_color": "أظهر اللون المحدد الذي تريده",
+    "guideline_size": "تضمين ملصقات المقاس أو القياسات",
+    "guideline_design": "التقاط أي تفاصيل تصميم محددة",
+    "selected_product_details": "تفاصيل المنتج المحددة",
+    "choose_from_gallery": "اختر من المعرض",
+    "take_photo": "التقاط صورة",
+    "show_product_details": "أظهر تفاصيل المنتج",
+    "capture_product_details": "التقاط تفاصيل المنتج",
+    "image_uploaded_successfully": "تم رفع الصورة بنجاح!",
+    "url_extracted": "تم استخراج الرابط بنجاح",
     "add_to_order": "إضافة للطلب",
     "current_order": "الطلب الحالي",
     "items_in_cart": "{{count}} عنصر في سلة التسوق",
@@ -211,4 +225,3 @@
     "size_required": "المقاس مطلوب"
   }
 }
-

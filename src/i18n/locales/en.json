@@ -63,6 +63,20 @@
     "quantity": "Quantity",
     "color": "Color",
     "size": "Size",
+    "product_image": "Product Image",
+    "image_purpose_title": "Why upload an image?",
+    "image_purpose_description": "Upload a photo showing the exact product details you want - the specific color, size, and design you've chosen. This helps us ensure we order exactly what you want.",
+    "image_guidelines": "What to include in your image",
+    "guideline_color": "Show the exact color you want",
+    "guideline_size": "Include size labels or measurements",
+    "guideline_design": "Capture any specific design details",
+    "selected_product_details": "Your selected product details",
+    "choose_from_gallery": "Choose from Gallery",
+    "take_photo": "Take Photo",
+    "show_product_details": "Show product details",
+    "capture_product_details": "Capture product details",
+    "image_uploaded_successfully": "Image uploaded successfully!",
+    "url_extracted": "URL extracted successfully",
     "add_to_order": "Add to Order",
     "current_order": "Current Order",
     "items_in_cart": "{{count}} item in your cart",
@@ -211,4 +225,3 @@
     "size_required": "Size is required"
   }
 }
-

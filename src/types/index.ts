@@ -65,6 +65,7 @@ export interface AddProductForm {
   price?: string;
   color?: string;
   size?: string;
+  image?: string;
 }
 
 export interface LoginForm {
